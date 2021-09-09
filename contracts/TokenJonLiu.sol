@@ -3,17 +3,30 @@
 pragma solidity ^0.7.3;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import "./IERC20.sol";          // transfer events specified here 
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';          // transfer events specified here 
+import '@openzeppelin/contracts/access/Ownable.sol';
 
-contract TokenJonLiu is ERC20 {
+abstract contract TokenJonLiu is ERC20, Ownable {
     address public admin;
     // all private variables start with an underscore '_'
     mapping(address => uint256) private _balances;
     uint256 private _totalSupply; 
+    bool _unlockable; 
+    
+    // for lock function
+    address public creator;
+    // address public owner; 
+    uint public unlockDate;
+    uint public createdAt; 
 
-    constructor() {
+    /**
+    * @param name_ Token Name = TokenJonLiu
+    * @param symbol_ TOKEN_TICKER = LWS 
+    *
+     */
+    constructor(string memory name_, string memory symbol_) {
         admin = msg.sender;
-        ERC20('Token Name', 'TOKEN_TICKER');
+        // ERC20('Token Name', 'TOKEN_TICKER');
         // mints initial supply 10^6 tokens
         _mint(msg.sender, 1000000);
     }
@@ -35,14 +48,14 @@ contract TokenJonLiu is ERC20 {
     *  @param amount number of tokens to destroy - ie. 500,000 tokens.
     *
      */
-    function burn(address account, uint256 amount) {
+    function _burn(address account, uint256 amount) override internal virtual {
         require(account != address(0), "ERC20: burn from the zero address");
         // _beforeTokenTransfer(account, address(0), amount);
         uint256 accountBalance = _balances[account];
         require(accountBalance >= amount, "ERC20: account balance should be larger than amount to burn"); 
-        unchecked {
-            _balances[account] = accountBalance - amount;
-        }
+        // unchecked {
+        //     _balances[account] = accountBalance - amount;
+        // }
         _totalSupply -= amount;
 
         emit Transfer(account, address(0), amount);
@@ -56,7 +69,13 @@ contract TokenJonLiu is ERC20 {
     *
     *
      */
-    function lock() {
+    function lock(address _creator, address _owner, uint _unlockDate) public onlyOwner {
+        // require(block.timestamp > 60000000);
+        require(_unlockable == true, "You have not been given the right to move tokens");
+        creator = _creator;
+        // owner = _owner;
+        unlockDate = _unlockDate;
+        createdAt = block.timestamp;
 
     }
 }
