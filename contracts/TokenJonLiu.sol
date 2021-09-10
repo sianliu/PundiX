@@ -19,7 +19,8 @@ import '@openzeppelin/contracts/access/Ownable.sol';
 * 4) Run all external contracts locally
 */
 
-abstract contract TokenJonLiu is ERC20, Ownable  {
+// Testing: removed ERC20 and Ownable
+contract TokenJonLiu {
 
     /**
     * @dev Error messages for require statements
@@ -27,46 +28,56 @@ abstract contract TokenJonLiu is ERC20, Ownable  {
     string internal constant AMOUNT_ZERO = 'Amount cannot be 0';
     string internal constant ACCOUNT_BALANCE = 'ERC20: account balance should be larger than amount to burn';
     string internal constant ONLY_ADMIN = 'Only admin can mint';
+    string internal constant ZERO_ADDRESS = 'ERC20: mint to the zero address';
 
     address public admin;
     // all private variables start with an underscore '_'
     mapping(address => uint256) private _balances;
-    uint256 private _totalSupply; 
     // bool _unlockable; 
     string private _name = 'TokenJonLiu';
     string private _symbol = 'LWS'; 
     address private _owner;
     address private _previousOwner;
     uint private _lockTime; 
+    uint private _totalSupply;
+
     
     // for lock function
     address public creator;
     // address public owner; 
     uint public unlockDate;
     uint public createdAt; 
+    uint public initialSupply;
 
     /**
     * @param name_ Token Name = TokenJonLiu
     * @param symbol_ TOKEN_TICKER = LWS 
     *
      */
-    constructor(string memory name_, string memory symbol_) {
+    constructor(string memory name_, string memory symbol_, uint initialSupply_) {
         _name = name_;
         _symbol = symbol_;
+        initialSupply = initialSupply_;
         admin = msg.sender;
         // ERC20('Token Name', 'TOKEN_TICKER');
         // mints initial supply 10^6 tokens
-        _mint(msg.sender, 1000000);
+        // _mint(msg.sender, 1000000);                      
+        _balances[msg.sender] = initialSupply_;
     }
 
     /**
         call this function to mint another 10^6 tokens
         @param to in this case msg.sender 
         @param amount 1,000,000  
+
+        Testing: internal function
      */
     function mint(address to, uint amount) external {
         require(msg.sender == admin, ONLY_ADMIN);
-        _mint(to, amount); 
+        require(to != address(0), ZERO_ADDRESS);
+        // _mint(to, amount);
+        _totalSupply += amount;
+        _balances[to] += amount;
     }
 
     /**
@@ -76,7 +87,7 @@ abstract contract TokenJonLiu is ERC20, Ownable  {
     *  @param amount number of tokens to destroy - ie. 500,000 tokens.
     *
      */
-    function _burn(address account, uint256 amount) override internal virtual {
+    function _burn(address account, uint256 amount) internal virtual {
         require(account != address(0), "ERC20: burn from the zero address");
         // _beforeTokenTransfer(account, address(0), amount);
         uint256 accountBalance = _balances[account];
@@ -86,7 +97,7 @@ abstract contract TokenJonLiu is ERC20, Ownable  {
         // }
         _totalSupply -= amount;
 
-        emit Transfer(account, address(0), amount);
+        // emit Transfer(account, address(0), amount);
 
         // _afterTokenTransfer(account, address(0), amount);
 
@@ -101,15 +112,20 @@ abstract contract TokenJonLiu is ERC20, Ownable  {
     /**
     * @dev Locks the contract for owner for the amount of time specified 
     *
-    * @param time amount of time to lock the contract for
+    * @param time amount of time to lock the contract for.
+    * 
+    * Testing: remove onlyOwner - create modifier locally. 
     */
-    function lock(uint time) public virtual onlyOwner {
+    function lock(uint time) public virtual {
         _previousOwner = _owner; 
         _owner = address(0);
         _lockTime = block.timestamp + time;
         // emit OwnershipTransferred(_owner, address(0)); 
     }
 
+    // function balanceOf(address owner_) public view override returns(uint) {
+    //     return _balances[owner_]; 
+    // }    
 
 } // end TokenJonLiu contract 
 
