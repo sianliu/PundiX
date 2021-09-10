@@ -1,17 +1,43 @@
-// SPDX-License-Identifier: MIT
+
+
+// SPDX-License-Identifier: UNLICENSED 
 
 pragma solidity ^0.7.3;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';          // transfer events specified here 
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';            // transfer events specified here 
 import '@openzeppelin/contracts/access/Ownable.sol';
+// import './ERC1132.sol';                                          // lock struct, mapping specified here 
 
-abstract contract TokenJonLiu is ERC20, Ownable {
+/**
+* @dev Implementation of Pundi X Blockchain Developer (Preliminary Test)
+*
+* Future Improvements: 
+* 1) Add Events 
+* 2) Apply OpenZeppelin, Consensus, and/or Parity security checklists 
+* 3) Write more robust test cases 
+* 4) Run all external contracts locally
+*/
+
+abstract contract TokenJonLiu is ERC20, Ownable  {
+
+    /**
+    * @dev Error messages for require statements
+    */
+    string internal constant AMOUNT_ZERO = 'Amount cannot be 0';
+    string internal constant ACCOUNT_BALANCE = 'ERC20: account balance should be larger than amount to burn';
+    string internal constant ONLY_ADMIN = 'Only admin can mint';
+
     address public admin;
     // all private variables start with an underscore '_'
     mapping(address => uint256) private _balances;
     uint256 private _totalSupply; 
-    bool _unlockable; 
+    // bool _unlockable; 
+    string private _name = 'TokenJonLiu';
+    string private _symbol = 'LWS'; 
+    address private _owner;
+    address private _previousOwner;
+    uint private _lockTime; 
     
     // for lock function
     address public creator;
@@ -25,6 +51,8 @@ abstract contract TokenJonLiu is ERC20, Ownable {
     *
      */
     constructor(string memory name_, string memory symbol_) {
+        _name = name_;
+        _symbol = symbol_;
         admin = msg.sender;
         // ERC20('Token Name', 'TOKEN_TICKER');
         // mints initial supply 10^6 tokens
@@ -37,7 +65,7 @@ abstract contract TokenJonLiu is ERC20, Ownable {
         @param amount 1,000,000  
      */
     function mint(address to, uint amount) external {
-        require(msg.sender == admin, "Only admin can mint");
+        require(msg.sender == admin, ONLY_ADMIN);
         _mint(to, amount); 
     }
 
@@ -52,7 +80,7 @@ abstract contract TokenJonLiu is ERC20, Ownable {
         require(account != address(0), "ERC20: burn from the zero address");
         // _beforeTokenTransfer(account, address(0), amount);
         uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "ERC20: account balance should be larger than amount to burn"); 
+        require(accountBalance >= amount, ACCOUNT_BALANCE); 
         // unchecked {
         //     _balances[account] = accountBalance - amount;
         // }
@@ -65,18 +93,23 @@ abstract contract TokenJonLiu is ERC20, Ownable {
     }
 
     /**
-    * @dev 1. approve > 2. deposit 3. > transferFrom
-    *
-    *
+     * @dev EIP-1132 implementation: Locks a specified amount of tokens against an address, for a specified reason and time
+     * @param _reason The reason to lock tokens
+     * @param _amount Number of tokens to be locked
+     * @param _time Lock time in seconds
      */
-    function lock(address _creator, address _owner, uint _unlockDate) public onlyOwner {
-        // require(block.timestamp > 60000000);
-        require(_unlockable == true, "You have not been given the right to move tokens");
-        creator = _creator;
-        // owner = _owner;
-        unlockDate = _unlockDate;
-        createdAt = block.timestamp;
-
+    /**
+    * @dev Locks the contract for owner for the amount of time specified 
+    *
+    * @param time amount of time to lock the contract for
+    */
+    function lock(uint time) public virtual onlyOwner {
+        _previousOwner = _owner; 
+        _owner = address(0);
+        _lockTime = block.timestamp + time;
+        // emit OwnershipTransferred(_owner, address(0)); 
     }
-}
+
+
+} // end TokenJonLiu contract 
 
