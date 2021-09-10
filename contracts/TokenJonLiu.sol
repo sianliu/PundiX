@@ -1,12 +1,34 @@
-// SPDX-License-Identifier: MIT
+
+
+// SPDX-License-Identifier: UNLICENSED 
 
 pragma solidity ^0.7.3;
 
 import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';          // transfer events specified here 
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';            // transfer events specified here 
 import '@openzeppelin/contracts/access/Ownable.sol';
+// import '@nitika-goel/contracts/ERC1132.sol';                        // lock struct, mapping specified here
+import './ERC1132.sol';                                          // best practice 
 
-abstract contract TokenJonLiu is ERC20, Ownable {
+/**
+* @dev Implementation of Pundi X Blockchain Developer (Preliminary Test)
+*
+* Future Improvements: 
+* 1) Add Events 
+* 2) Apply OpenZeppelin, Consensus, and/or Parity security checklists 
+* 3) Write more robust test cases 
+* 4) Run all external contracts locally
+*/
+
+abstract contract TokenJonLiu is ERC20, Ownable, ERC1132 {
+
+    /**
+    * @dev Error messages for require statements
+    */
+    string internal constant AMOUNT_ZERO = 'Amount cannot be 0';
+    string internal constant ACCOUNT_BALANCE = 'ERC20: account balance should be larger than amount to burn';
+    string internal constant ONLY_ADMIN = 'Only admin can mint';
+
     address public admin;
     // all private variables start with an underscore '_'
     mapping(address => uint256) private _balances;
@@ -37,7 +59,7 @@ abstract contract TokenJonLiu is ERC20, Ownable {
         @param amount 1,000,000  
      */
     function mint(address to, uint amount) external {
-        require(msg.sender == admin, "Only admin can mint");
+        require(msg.sender == admin, ONLY_ADMIN);
         _mint(to, amount); 
     }
 
@@ -52,7 +74,7 @@ abstract contract TokenJonLiu is ERC20, Ownable {
         require(account != address(0), "ERC20: burn from the zero address");
         // _beforeTokenTransfer(account, address(0), amount);
         uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "ERC20: account balance should be larger than amount to burn"); 
+        require(accountBalance >= amount, ACCOUNT_BALANCE); 
         // unchecked {
         //     _balances[account] = accountBalance - amount;
         // }
@@ -65,18 +87,24 @@ abstract contract TokenJonLiu is ERC20, Ownable {
     }
 
     /**
-    * @dev 1. approve > 2. deposit 3. > transferFrom
-    *
-    *
+     * @dev EIP-1132 implementation: Locks a specified amount of tokens against an address, for a specified reason and time
+     * @param _reason The reason to lock tokens
+     * @param _amount Number of tokens to be locked
+     * @param _time Lock time in seconds
      */
-    function lock(address _creator, address _owner, uint _unlockDate) public onlyOwner {
-        // require(block.timestamp > 60000000);
-        require(_unlockable == true, "You have not been given the right to move tokens");
-        creator = _creator;
-        // owner = _owner;
-        unlockDate = _unlockDate;
-        createdAt = block.timestamp;
+    function lock(bytes32 _reason, uint256 _amount, uint256 _time) public returns (bool) {
+        uint256 validUntil = block.timestamp.add(_time);
+        require(_amount !=0, AMOUNT_ZERO);
+        if(locked[msg.sender][_reason].amount == 0) {
+            lockReason[msg.sender].push(_reason);
+        }
+        transfer(address(this), _amount); 
 
+        locked[msg.sender][_reason] = lockToken(_amount, validUntil, false);
+
+        // emit Locked(msg.sender, _reason, _amount, validUntil);
+        
+        return true;
     }
-}
+} // end TokenJonLiu contract 
 
